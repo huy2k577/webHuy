@@ -1,36 +1,38 @@
 FROM php:8.2-cli
 
-# Cài các extension và công cụ cần thiết
+# Cài các công cụ hỗ trợ build
 RUN apt-get update && apt-get install -y \
     unzip \
     git \
     curl \
     libzip-dev \
     zip \
-    php-mysql \
-    php-mbstring \
-    php-xml \
-    php-curl \
-    php-bcmath \
-    php-gd \
-    php-intl \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    libicu-dev \
+    libcurl4-openssl-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
     nodejs \
-    npm
+    npm \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo pdo_mysql mbstring xml curl bcmath zip gd intl
 
-# Cài Composer
+# Cài composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Tạo thư mục app
+# Tạo thư mục ứng dụng
 WORKDIR /app
 
-# Copy source code vào container
+# Copy toàn bộ source code vào container
 COPY . .
 
-# Cài đặt các gói PHP
+# Cài dependency Laravel
 RUN composer install --no-interaction --prefer-dist --optimize-autoloader
 
-# Cấp quyền cho thư mục cache và log
+# Cấp quyền cho Laravel
 RUN chmod -R 777 storage bootstrap/cache
 
-# Khởi động Laravel (chạy bằng PHP built-in server)
+# Chạy server PHP built-in
 CMD php artisan serve --host=0.0.0.0 --port=8000
