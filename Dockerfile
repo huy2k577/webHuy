@@ -1,7 +1,6 @@
-# Dựa trên hình ảnh PHP chính thức có sẵn Composer
-FROM composer:latest
+FROM php:8.2-cli
 
-# Cài thêm PHP, extensions, NodeJS, npm
+# Cài các extension và công cụ cần thiết
 RUN apt-get update && apt-get install -y \
     unzip \
     git \
@@ -13,41 +12,25 @@ RUN apt-get update && apt-get install -y \
     php-xml \
     php-curl \
     php-bcmath \
-    php-mysqli \
-    php-pdo \
-    php-tokenizer \
-    php-zip \
     php-gd \
     php-intl \
     nodejs \
     npm
 
-# Cài Laravel nếu cần
-# RUN composer global require laravel/installer
+# Cài Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Tạo thư mục ứng dụng
+# Tạo thư mục app
 WORKDIR /app
 
-# Copy toàn bộ dự án vào
+# Copy source code vào container
 COPY . .
 
-# Cài đặt thư viện PHP bằng Composer
-RUN composer install --no-dev --optimize-autoloader
+# Cài đặt các gói PHP
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader
 
-# Cài frontend nếu có (tùy dự án)
-# RUN npm install && npm run build
+# Cấp quyền cho thư mục cache và log
+RUN chmod -R 777 storage bootstrap/cache
 
-# Tạo file .env nếu chưa có
-RUN cp .env.example .env || true
-
-# Generate app key
-RUN php artisan key:generate
-
-# Migrate database nếu dùng SQLite/MySQL
-# RUN php artisan migrate --force
-
-# Mở cổng Laravel
-EXPOSE 8000
-
-# Chạy Laravel khi container khởi động
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+# Khởi động Laravel (chạy bằng PHP built-in server)
+CMD php artisan serve --host=0.0.0.0 --port=8000
